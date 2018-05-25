@@ -1,5 +1,6 @@
 ﻿using CodeFirstTutorial;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,19 +10,42 @@ namespace TrainData
 {
     public interface ITrainRepository
     {
-        IEnumerable<Train> ListTrains();
+        IEnumerable ListTrains();
         void DeleteAllTrains();
         void Delete(int id);
-        void Edit(string oldTrainSymbol, string trainSymbol, int speed = 0, string description = "");
-        void Add(string trainSymbol, int speed, string stationName, string stationAddress, string description = "");
+        void Edit(int id, string trainSymbol, int speed = 0, string description = "");
+        Train GetTrain(int id);
+        void Add(Train train, TrainStation trainStation);
     }
     public class TrainRepository : ITrainRepository
     {
-        public IEnumerable<Train> ListTrains()
+        public IEnumerable ListTrains()
         {
             using (var db = new TrainContext())
             {
-                return db.Trains.AsNoTracking().ToList();
+
+                var train = from x in db.Trains.AsNoTracking()
+                             join y in db.TrainStations.AsNoTracking() on x.StationID equals y.StationID
+                             select new
+                             {
+                                 x.TrainSymbol,
+                                 x.Speed,
+                                 x.Description,
+                                 y.StationName,
+                                 y.StationAddress
+                             };
+
+                return train.ToList();
+            }
+
+        }
+
+        public Train GetTrain(int id)
+        {
+            using (var db = new TrainContext())
+            {
+                var train = db.Trains.FirstOrDefault(x => x.TrainID == id);
+                    return train;
             }
         }
 
@@ -44,11 +68,11 @@ namespace TrainData
             }
         }
                
-        public void Edit(string oldTrainSymbol, string trainSymbol, int speed = 0, string description = "")
+        public void Edit(int id, string trainSymbol, int speed = 0, string description = "")
         {
             using (var db = new TrainContext())
             {
-                var train = db.Trains.FirstOrDefault(x => x.TrainSymbol == oldTrainSymbol);
+                var train = db.Trains.FirstOrDefault(x => x.TrainID == id);
 
                 if (train != null)
                 {
@@ -60,13 +84,16 @@ namespace TrainData
             }
         }
                
-        public void Add(string trainSymbol, int speed, string stationName, string stationAddress, string description = "")
+        public void Add(Train train, TrainStation trainStation)
         {
             using (var db = new TrainContext())
-            {
-                db.Trains.Add(new Train { TrainSymbol = trainSymbol, Speed = speed, Description = description });
-                db.TrainStations.Add(new TrainStation { StationName = stationName, StationAddress = stationAddress });
-                db.SaveChanges();
+            {   
+                if(!(db.Trains.Any(x => x.TrainSymbol == train.TrainSymbol) || db.TrainStations.Any(x => x.StationName == trainStation.StationName)))
+                {
+                    db.Trains.Add(new Train { TrainSymbol = train.TrainSymbol, Speed = train.Speed, Description = train.Description });
+                    db.TrainStations.Add(new TrainStation { StationName = trainStation.StationName, StationAddress = trainStation.StationAddress });
+                    db.SaveChanges();
+                }
             }
         }
     }
