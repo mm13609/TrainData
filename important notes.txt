@@ -1,0 +1,5 @@
+connection - tcp:rollkall-development.database.windows.net
+Go to options and add the database name manually
+database - RollKall-dev
+user id - RollKall@rollkall-development
+password - R9z2umzVcA9pk
